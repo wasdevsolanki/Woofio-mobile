@@ -1,0 +1,837 @@
+/**
+ * Sample React Native App
+ * https://github.com/facebook/react-native
+ *
+ * @format
+ */
+
+import React from 'react';
+import type {PropsWithChildren} from 'react';
+import {
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  useColorScheme,
+  View,
+} from 'react-native';
+
+import {
+  Colors,
+  DebugInstructions,
+  Header,
+  LearnMoreLinks,
+  ReloadInstructions,
+} from 'react-native/Libraries/NewAppScreen';
+
+type SectionProps = PropsWithChildren<{
+  title: string;
+}>;
+
+function Section({children, title}: SectionProps): React.JSX.Element {
+  const isDarkMode = useColorScheme() === 'dark';
+  return (
+    <View style={styles.sectionContainer}>
+      <Text
+        style={[
+          styles.sectionTitle,
+          {
+            color: isDarkMode ? Colors.white : Colors.black,
+          },
+        ]}>
+        {title}
+      </Text>
+      <Text
+        style={[
+          styles.sectionDescription,
+          {
+            color: isDarkMode ? Colors.light : Colors.dark,
+          },
+        ]}>
+        {children}
+      </Text>
+    </View>
+  );
+}
+
+function App(): React.JSX.Element {
+  const isDarkMode = useColorScheme() === 'dark';
+
+  const backgroundStyle = {
+    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+  };
+
+  return (
+    <SafeAreaView style={backgroundStyle}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor={backgroundStyle.backgroundColor}
+      />
+      <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
+        style={backgroundStyle}>
+        <Header />
+        <View
+          style={{
+            backgroundColor: isDarkMode ? Colors.black : Colors.white,
+          }}>
+          <Section title="Step One">
+            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
+            screen and then come back to see your edits.
+          </Section>
+          <Section title="See Your Changes">
+            <ReloadInstructions />
+          </Section>
+          <Section title="Debug">
+            <DebugInstructions />
+          </Section>
+          <Section title="Learn More">
+            Read the docs to discover what to do next:
+          </Section>
+          <LearnMoreLinks />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  sectionContainer: {
+    marginTop: 32,
+    paddingHorizontal: 24,
+  },
+  sectionTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+  },
+  sectionDescription: {
+    marginTop: 8,
+    fontSize: 18,
+    fontWeight: '400',
+  },
+  highlight: {
+    fontWeight: '700',
+  },
+});
+
+export default App;
+
+
+
+import bodyParser from 'body-parser';
+import dotenv from 'dotenv';
+
+const express = require('express');
+const sequelize = require('./config/database');
+const authRoutes = require('./routes/authRoutes');
+
+const app = express();
+app.use(express.json());
+
+app.use('/api/auth', authRoutes);
+
+sequelize.sync().then(() => {
+  app.listen(5000, () => {
+    console.log('Server running on port 5000');
+  });
+}).catch(err => console.error('Failed to sync database:', err));
+
+
+
+
+
+
+
+
+
+
+import React, { useContext, useEffect, useState } from 'react';
+import { createDrawerNavigator } from '@react-navigation/drawer';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AuthContext } from '../utils/AuthContext';
+import AdminHome from '../screens/admin/dashboard';
+import VendorHome from '../screens/vendor/dashboard';
+
+import UserHome from '../screens/user/dashboard';
+import PetList from '../screens/user/PetList';
+import VaccineList from '../screens/user/VaccineList';
+import userProfile from '../screens/user/Profile';
+
+import Login from '../screens/auth/Login';
+import Home from '../screens/Home';
+import LogoutScreen from '../screens/auth/Logout';
+
+const Drawer = createDrawerNavigator();
+const Stack = createNativeStackNavigator();
+
+function AppNavigator() {
+
+    function UserStack() {
+      return (
+        <Stack.Navigator>
+          <Stack.Screen name="VaccineList" component={VaccineList} />
+        </Stack.Navigator>
+      );
+    }
+
+  const { userRole, logout } = useContext(AuthContext);
+  const [initialRoute, setInitialRoute] = useState('Login');
+
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      const role = await AsyncStorage.getItem('userRole');
+      if (role) {
+        if (role === 'admin') setInitialRoute('Admin');
+        else if (role === 'vendor') setInitialRoute('Doctor');
+        else if (role === 'user') setInitialRoute('Owner');
+        else setInitialRoute('Home');
+      } else {
+        setInitialRoute('Login');
+      }
+    };
+    checkLoginStatus();
+  }, [userRole]);
+
+  return (
+    <NavigationContainer>
+      <Drawer.Navigator initialRouteName={initialRoute}>
+        {!userRole && <Drawer.Screen name="Login" component={Login} />}
+        {!userRole && <Drawer.Screen name="Home" component={Home} />}
+
+        {userRole === 'admin' && <Drawer.Screen name="Admin" component={AdminHome} />}
+        {userRole === 'vendor' && <Drawer.Screen name="Doctor" component={VendorHome} />}
+
+        {userRole === 'user' && <Drawer.Screen name="Owner" component={UserStack}
+            options = {{
+                drawerLabel: 'Dashboard'
+            }}
+        />}
+
+        {userRole === 'user' && <Drawer.Screen name="Profile" component={userProfile} />}
+
+        {userRole && (
+          <Drawer.Screen name="Logout" component={LogoutScreen}
+            options={{
+              title: 'Logout',
+              drawerLabel: 'Logout',
+              onPress: () => {
+                logout();
+                // Navigate back to the Login screen after logout
+                setInitialRoute('Login');
+              },
+            }}
+          />
+        )}
+      </Drawer.Navigator>
+    </NavigationContainer>
+  );
+}
+
+export default AppNavigator;
+
+
+
+
+
+// import React, { useState, useContext, useEffect } from 'react';
+// import { View, Text, TextInput, Alert, ImageBackground, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+// import axios from 'axios';
+// import { RouteProp } from '@react-navigation/native';
+// import { AuthContext } from '../../utils/AuthContext';
+// import DatePicker from 'react-native-date-picker';
+// import { Picker } from '@react-native-picker/picker';
+
+// type PetRegisterProps = {
+//   route: RouteProp<RootStackParamList, 'Pet Register'>;
+// };
+
+// const PetRegister: React.FC<PetRegisterProps> = ({ route }) => {
+//   const { qrData } = route.params || {};
+//   const { authUser } = useContext(AuthContext);
+
+//   // State for each input field
+//   const [petName, setPetName] = useState('');
+//   const [petAge, setPetAge] = useState<Date | null>(new Date());
+//   const [category, setCategory] = useState('');
+//   const [gender, setGender] = useState('');
+//   const [breedType, setBreedType] = useState('');
+//   const [color, setColor] = useState('');
+//   const [breed, setBreed] = useState('');
+//   const [specialInstruction, setSpecialInstruction] = useState('');
+//   const [openAgeDatePicker, setOpenAgeDatePicker] = useState(false);
+//   const [rfid, setRFID] = useState('');
+//   const [breeds, setBreeds] = useState<string[]>([]); // Array for breeds
+
+//   const registerPet = async () => {
+//     if (!authUser) {
+//       Alert.alert('Error', 'No authenticated user found.');
+//       return;
+//     }
+
+//     try {
+//       const response = await axios.post('https://dev.virtual-assistant.xyz/api/pet/register', {
+//         user_id: authUser.id,
+//         qr_id: qrData,
+//         pet_name: petName,
+//         pet_age: petAge,
+//         category,
+//         gender,
+//         breed_type: breedType,
+//         breed,
+//         special_instruction: specialInstruction,
+//         rfid,
+//         color,
+//       });
+      
+//       if (response.status === 200) {
+//         console.log('Result:', response.data);
+//         Alert.alert('Success', 'Pet registered successfully!');
+//       } else {
+//         Alert.alert('Error', 'Failed to register pet');
+//       }
+//     } catch (error) {
+//       console.error(error);
+//       Alert.alert('Error', 'Failed to register pet');
+//     }
+//   };
+
+//   // Function to fetch breeds based on category
+//   const fetchBreeds = async (category: string) => {
+//     try {
+//       const response = await axios.get(`https://www.localizadorwoofio.com/api/pet/breed?category=${category}`);
+//       if (response.status === 200) {
+//         console.log('Category Breeds: ', response.data); 
+//         setBreeds(response.data.breeds);
+//       }
+//     } catch (error) {
+//       console.error('Error fetching breeds:', error);
+//       setBreeds([]); // Clear the breeds if an error occurs
+//     }
+//   };
+
+//   // Handle category change and fetch breeds
+//   const handleCategoryChange = (selectedCategory: string) => {
+//     setCategory(selectedCategory);
+//     if (selectedCategory) {
+//       fetchBreeds(selectedCategory);
+//     } else {
+//       setBreeds([]); // Clear breeds if no category is selected
+//     }
+//   };
+
+//   return (
+//     <ImageBackground
+//       source={require('../../../assets/images/woofio-bg.png')}
+//       style={styles.backgroundImage}
+//       resizeMode="cover"
+//     >
+//       <ScrollView contentContainerStyle={styles.scrollContainer}>
+//         <View style={styles.formContainer}>
+          
+//           {qrData && <Text style={styles.qrData}>QR Data: {qrData}</Text>}
+
+//           <Text style={styles.label}>Pet Name</Text>
+//           <TextInput
+//             style={styles.input}
+//             placeholder="Pet Name"
+//             value={petName}
+//             onChangeText={setPetName}
+//           />
+          
+//           <Text style={styles.label}>Pet Age</Text>
+//           <TouchableOpacity
+//             style={styles.datePicker}
+//             onPress={() => setOpenAgeDatePicker(true)}>
+//             <View style={[styles.input, styles.inputDate]}>
+//               <Text>
+//                 {petAge ? petAge.toDateString() : 'Select Pet Age'}
+//               </Text>
+//             </View>
+//           </TouchableOpacity>
+//           <DatePicker
+//             modal
+//             open={openAgeDatePicker}
+//             date={petAge || new Date()}
+//             mode="date"
+//             onConfirm={(date) => {
+//               setPetAge(date);
+//               setOpenAgeDatePicker(false);
+//             }}
+//             onCancel={() => setOpenAgeDatePicker(false)}
+//           />
+
+//           <Text style={styles.label}>Category</Text>
+//           <View style={styles.pickerContainer}>
+//             <Picker
+//               selectedValue={category}
+//               onValueChange={handleCategoryChange}
+//               style={styles.picker}
+//             >
+//               <Picker.Item style={styles.labelSelect} label="Select Pet Category" value="" />
+//               <Picker.Item style={styles.labelSelect} label="Cat" value="cat" />
+//               <Picker.Item style={styles.labelSelect} label="Dog" value="dog" />
+//             </Picker>
+//           </View>
+
+//           <Text style={styles.label}>Gender</Text>
+//           <View style={styles.pickerContainer}>
+//             <Picker
+//               selectedValue={gender}
+//               onValueChange={(itemValue) => setGender(itemValue)}
+//               style={styles.picker}
+//             >
+//               <Picker.Item style={styles.labelSelect} label="Select Pet Gender" value="" />
+//               <Picker.Item style={styles.labelSelect} label="Male" value="male" />
+//               <Picker.Item style={styles.labelSelect} label="Female" value="female" />
+//             </Picker>
+//           </View>
+
+//           <Text style={styles.label}>Breed Type</Text>
+//           <View style={styles.pickerContainer}>
+//             <Picker
+//               selectedValue={breedType}
+//               onValueChange={(itemValue) => setBreedType(itemValue)}
+//               style={styles.picker}
+//             >
+//               <Picker.Item style={styles.labelSelect} label="Select Breed Type" value="" />
+//               <Picker.Item style={styles.labelSelect} label="Purebreed" value="purebred" />
+//               <Picker.Item style={styles.labelSelect} label="Mixed" value="mixed" />
+//             </Picker>
+//           </View>
+
+//           <Text style={styles.label}>Breed</Text>
+//           <View style={styles.pickerContainer}>
+//             <Picker
+//               selectedValue={breed}
+//               onValueChange={(itemValue) => setBreed(itemValue)}
+//               style={styles.picker}
+//             >
+//               <Picker.Item style={styles.labelSelect} label="Select Breed" value="" />
+//               {breeds.map((breedOption, index) => (
+//                 <Picker.Item key={index} label={breedOption} value={breedOption} />
+//               ))}
+//             </Picker>
+//           </View>
+
+//           <Text style={styles.label}>Pet Color</Text>
+//           <View style={styles.pickerContainer}>
+//             <Picker
+//               selectedValue={color}
+//               onValueChange={(itemValue) => setColor(itemValue)}
+//               style={styles.picker}
+//             >
+//               <Picker.Item style={styles.labelSelect} label="Select Pet Color" value="" />
+//             </Picker>
+//           </View>
+
+//           <Text style={styles.label}>Special Instructions</Text>
+//           <TextInput
+//             style={styles.input}
+//             placeholder="Special Instructions"
+//             value={specialInstruction}
+//             onChangeText={setSpecialInstruction}
+//           />
+
+//           <Text style={styles.label}>RFID Tracking</Text>
+//           <TextInput
+//             style={styles.input}
+//             placeholder="RFID Number 15 digit"
+//             value={rfid}
+//             onChangeText={setRFID}
+//           />
+
+//           <TouchableOpacity style={styles.registerButton} onPress={registerPet}>
+//             <Text style={styles.registerButtonText}>Register Pet</Text>
+//           </TouchableOpacity>
+//         </View>
+//       </ScrollView>
+//     </ImageBackground>
+//   );
+// };
+
+// const styles = StyleSheet.create({
+//   backgroundImage: {
+//     flex: 1,
+//   },
+//   scrollContainer: {
+//     paddingVertical: 20,
+//   },
+//   formContainer: {
+//     paddingHorizontal: 20,
+//   },
+//   qrData: {
+//     fontSize: 14,
+//     color: 'green',
+//     marginBottom: 10,
+//   },
+//   label: {
+//     fontSize: 12,
+//     color: 'black',
+//     marginBottom: 5,
+//   },
+//   datePicker: {
+//     width: '100%',
+//   },
+//   pickerContainer: {
+//     flex: 1,
+//     justifyContent: 'center',
+//     alignItems: 'center',
+//     borderWidth: 1,
+//     borderColor: 'gray',
+//     borderRadius: 10,
+//     marginBottom: 10,
+//     height: 40,
+//     backgroundColor: 'white',
+//   },
+//   picker: {
+//     height: 30,
+//     width: '100%',
+//     color: 'gray',
+//   },
+//   labelSelect: {
+//     fontSize: 14,
+//   },
+//   input: {
+//     height: 40,
+//     borderColor: 'gray',
+//     borderWidth: 1,
+//     marginBottom: 10,
+//     paddingHorizontal: 10,
+//     backgroundColor: 'white',
+//     color: 'black',
+//     borderRadius: 10,
+//   },
+//   inputDate: {
+//     flex: 1,
+//     justifyContent: 'center',
+//   },
+//   registerButton: {
+//     backgroundColor: 'black',
+//     paddingVertical: 15,
+//     paddingHorizontal: 20,
+//     borderRadius: 5,
+//     alignItems: 'center',
+//     marginTop: 20,
+//   },
+//   registerButtonText: {
+//     color: '#fff',
+//     fontSize: 14,
+//     fontWeight: 'bold',
+//   },
+// });
+
+// export default PetRegister;
+
+
+
+import React, { useState, useContext, useEffect } from 'react';
+import { View, Text, TextInput, Alert, ImageBackground, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import axios from 'axios';
+import { RouteProp } from '@react-navigation/native';
+import { AuthContext } from '../../utils/AuthContext';
+import DatePicker from 'react-native-date-picker';
+import { Picker } from '@react-native-picker/picker';
+
+type PetRegisterProps = {
+  route: RouteProp<RootStackParamList, 'Pet Register'>;
+};
+
+const PetRegister: React.FC<PetRegisterProps> = ({ route }) => {
+  const { qrData } = route.params || {};
+  const { authUser } = useContext(AuthContext);
+
+  const [petName, setPetName] = useState('');
+  const [petAge, setPetAge] = useState<Date | null>(new Date());
+  const [category, setCategory] = useState('');
+  const [gender, setGender] = useState('');
+  const [breedType, setBreedType] = useState('');
+  const [color, setColor] = useState('');
+  const [breed, setBreed] = useState('');
+  const [specialInstruction, setSpecialInstruction] = useState('');
+  const [openAgeDatePicker, setOpenAgeDatePicker] = useState(false);
+  const [rfid, setRFID] = useState('');
+  const [breeds, setBreeds] = useState<string[]>([]); // Array for breeds
+  const [availableColors, setAvailableColors] = useState<string[]>([]);
+
+  // Define pet colors
+  const petColors = {
+    dog: [
+      "Negro", "Blanco", "Café", "Gris", "Dorado", "Rojo", "Azul/Gris", "Atigrado", "Merle",
+      "Amarillo", "Crema", "Blanco/Amarillo", "Sable", "Tricolor", "Bicolor"
+    ],
+    cat: [
+      "Negro", "Blanco", "Café", "Gris", "Orange", "Calico", "Tabby", "Tortoiseshell", 
+      "Azul/Gris", "Crema", "Lilac", "Chocolate", "Seal", "Rojo", "Bicolor", "Pointed"
+    ]
+  };
+
+  const registerPet = async () => {
+    if (!authUser) {
+      Alert.alert('Error', 'No authenticated user found.');
+      return;
+    }
+
+    try {
+      const response = await axios.post('https://dev.virtual-assistant.xyz/api/pet/register', {
+        user_id: authUser.id,
+        qr_id: qrData,
+        pet_name: petName,
+        pet_age: petAge,
+        category,
+        gender,
+        breed_type: breedType,
+        breed,
+        special_instruction: specialInstruction,
+        rfid,
+        color,
+      });
+      
+      if (response.status === 200) {
+        console.log('Result:', response.data);
+        Alert.alert('Success', 'Pet registered successfully!');
+      } else {
+        Alert.alert('Error', 'Failed to register pet');
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'Failed to register pet');
+    }
+  };
+
+  const fetchBreeds = async (category: string) => {
+    try {
+      const response = await axios.get(`https://www.localizadorwoofio.com/api/pet/breed?category=${category}`);
+      if (response.status === 200) {
+        // Access the breed data correctly
+        const breedData = response.data.breed;
+        if (Array.isArray(breedData)) {
+            setBreeds(breedData.map(breed => breed.name));
+        } else {
+            setBreeds([]); // Clear breeds if not an array
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching breeds:', error);
+      setBreeds([]); // Clear the breeds if an error occurs
+    }
+  };
+
+  const handleCategoryChange = (selectedCategory: string) => {
+    setCategory(selectedCategory);
+    if (selectedCategory) {
+      fetchBreeds(selectedCategory);
+      setAvailableColors(petColors[selectedCategory]);
+    } else {
+      setBreeds([]);
+      setAvailableColors([]);
+    }
+  };
+
+  return (
+    <ImageBackground
+      source={require('../../../assets/images/woofio-bg.png')}
+      style={styles.backgroundImage}
+      resizeMode="cover"
+    >
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <View style={styles.formContainer}>
+          
+          {qrData && <Text style={styles.qrData}>QR Data: {qrData}</Text>}
+
+          <Text style={styles.label}>Pet Name</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Pet Name"
+            value={petName}
+            onChangeText={setPetName}
+          />
+          
+          <Text style={styles.label}>Pet Age</Text>
+          <TouchableOpacity
+            style={styles.datePicker}
+            onPress={() => setOpenAgeDatePicker(true)}>
+            <View style={[styles.input, styles.inputDate]}>
+              <Text>
+                {petAge ? petAge.toDateString() : 'Select Pet Age'}
+              </Text>
+            </View>
+          </TouchableOpacity>
+          <DatePicker
+            modal
+            open={openAgeDatePicker}
+            date={petAge || new Date()}
+            mode="date"
+            onConfirm={(date) => {
+              setPetAge(date);
+              setOpenAgeDatePicker(false);
+            }}
+            onCancel={() => setOpenAgeDatePicker(false)}
+          />
+
+          <Text style={styles.label}>Category</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={category}
+              onValueChange={handleCategoryChange}
+              style={styles.picker}
+            >
+              <Picker.Item style={styles.labelSelect} label="Select Pet Category" value="" />
+              <Picker.Item style={styles.labelSelect} label="Cat" value="cat" />
+              <Picker.Item style={styles.labelSelect} label="Dog" value="dog" />
+            </Picker>
+          </View>
+
+          <Text style={styles.label}>Gender</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={gender}
+              onValueChange={(itemValue) => setGender(itemValue)}
+              style={styles.picker}
+            >
+              <Picker.Item style={styles.labelSelect} label="Select Pet Gender" value="" />
+              <Picker.Item style={styles.labelSelect} label="Male" value="male" />
+              <Picker.Item style={styles.labelSelect} label="Female" value="female" />
+            </Picker>
+          </View>
+
+          <Text style={styles.label}>Breed Type</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={breedType}
+              onValueChange={(itemValue) => setBreedType(itemValue)}
+              style={styles.picker}
+            >
+              <Picker.Item style={styles.labelSelect} label="Select Breed Type" value="" />
+              <Picker.Item style={styles.labelSelect} label="Purebreed" value="purebred" />
+              <Picker.Item style={styles.labelSelect} label="Mixed" value="mixed" />
+            </Picker>
+          </View>
+
+          <Text style={styles.label}>Breed</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={breed}
+              onValueChange={(itemValue) => setBreed(itemValue)}
+              style={styles.picker}
+            >
+              <Picker.Item style={styles.labelSelect} label="Select Breed" value="" />
+              {breeds.map((breedOption, index) => (
+                <Picker.Item key={index} label={breedOption} value={breedOption} />
+              ))}
+            </Picker>
+          </View>
+
+          <Text style={styles.label}>Pet Color</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={color}
+              onValueChange={(itemValue) => setColor(itemValue)}
+              style={styles.picker}
+            >
+              <Picker.Item style={styles.labelSelect} label="Select Pet Color" value="" />
+              {availableColors.map((colorOption, index) => (
+                <Picker.Item key={index} label={colorOption} value={colorOption} />
+              ))}
+            </Picker>
+          </View>
+
+          <Text style={styles.label}>Special Instructions</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Special Instructions"
+            value={specialInstruction}
+            onChangeText={setSpecialInstruction}
+          />
+
+          <Text style={styles.label}>RFID</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="RFID"
+            value={rfid}
+            onChangeText={setRFID}
+          />
+
+          <TouchableOpacity style={styles.registerButton} onPress={registerPet}>
+            <Text style={styles.registerButtonText}>Register Pet</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </ImageBackground>
+  );
+};
+
+const styles = StyleSheet.create({
+  backgroundImage: {
+    flex: 1,
+  },
+  scrollContainer: {
+    paddingVertical: 20,
+  },
+  formContainer: {
+    paddingHorizontal: 20,
+  },
+  qrData: {
+    fontSize: 14,
+    color: 'green',
+    marginBottom: 10,
+  },
+  label: {
+    fontSize: 12,
+    color: 'black',
+    marginBottom: 5,
+  },
+  datePicker: {
+    width: '100%',
+  },
+  pickerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'gray',
+    borderRadius: 10,
+    marginBottom: 10,
+    height: 40,
+    backgroundColor: 'white',
+  },
+  picker: {
+    height: 30,
+    width: '100%',
+    color: 'gray',
+  },
+  labelSelect: {
+    fontSize: 14,
+  },
+  input: {
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    marginBottom: 10,
+    paddingHorizontal: 10,
+    backgroundColor: 'white',
+    color: 'black',
+    borderRadius: 10,
+  },
+  inputDate: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  registerButton: {
+    backgroundColor: 'black',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  registerButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+});
+
+export default PetRegister;
